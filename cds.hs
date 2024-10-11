@@ -1,37 +1,62 @@
 {-# language LambdaCase, TypeSynonymInstances, FlexibleInstances #-}
 
+import System.Directory
 import System.Environment
 import System.Process
 import Data.List
 import Data.List.Split
 
+type PathName = String
 type Nickname = String
 type Dir = String
+type Path = String
 type CdCounter = Int
 type NickNameInfo = (Dir, CdCounter)
 type NickNameTuple = (Nickname, NickNameInfo)
 
-nicknames_file :: String
-nicknames_file = "/.dir_nicknames"
+-- relative to HOME
+get_cds_dir :: IO Dir
+get_cds_dir = getEnv "HOME" >$> (++ "/.local/share/cds/")
 
+paths_file_str :: IO String
+paths_file_str =
+  getEnv "HOME" >$> (++ "/.local/share/cds/paths_file") >>= readFile
+
+paths :: IO [(PathName, Path)]
+paths =
+  paths_file_str >$> lines >$> map split_line
+  where
+  split_line :: String -> (PathName, Path)
+  split_line line = case splitOn "=" line of
+    [path_name, path] -> (path_name, path)
+    _ -> error $ paths_error line
+
+get_path_name :: PathName -> IO Path
+get_path_name path_name =
+  paths >$> filter (fst .> (== path_name)) >$> \case
+    [] -> error $ get_path_name_err1 path_name
+    [(_, path)] -> path
+    _ -> error $ get_path_name_err2 path_name
+
+get_nicknames_file_path :: IO Path
+get_nicknames_file_path = get_path_name "nns_path"
+
+get_help_file_path :: IO Path
+get_help_file_path = get_path_name "help_file"
+
+get_add_help_file_path :: IO Path
+get_add_help_file_path = get_path_name "add_help_file"
+
+-- main
 main :: IO ()
 main =
-  set_nicknames_file >>
   getArgs >>= \case
-    ["add", nickname, dir] -> try_to_add_nickname nickname dir
-    ["addwd", nickname] -> try_to_addwd_nickname nickname
+    [] -> list
+    ["add", nickname] -> try_to_addwd_nickname nickname
     ["del", nickname] -> try_to_delete_nickname nickname
-    ["list"] -> list
+    ["help"] -> help
     ["inc_cd_counter", nickname] -> inc_cd_counter nickname
     _ -> error main_err
-
--- set/get nicknames file
-set_nicknames_file :: IO ()
-set_nicknames_file =
-  getEnv "HOME" >$> (++ nicknames_file) >>= setEnv "nicknames"
-
-get_nicknames_file :: IO Dir
-get_nicknames_file = getEnv "nicknames"
 
 -- try to add/addwd/cd/delete/
 try_to_add_nickname :: Nickname -> FilePath -> IO ()
@@ -42,9 +67,9 @@ try_to_add_nickname nickname dir =
   where
   add_nickname :: Nickname -> FilePath -> IO ()
   add_nickname nickname dir =
-    get_nicknames_file >>= \nicknames_file ->
-    print("\nadding " ++ init dir ++ " as " ++ nickname ++ "\n") >>
-    appendFile nicknames_file (nickname ++ "," ++ dir ++ ",0")
+    print("\nadding " ++ dir ++ " as " ++ nickname ++ "\n") >>
+    get_nicknames_file_path >>=
+    flip appendFile ("\n" ++ nickname ++ "," ++ dir ++ ",0")
 
 try_to_addwd_nickname :: Nickname -> IO ()
 try_to_addwd_nickname nickname =
@@ -65,7 +90,9 @@ delete_nickname tuples nickname dir =
 
 list :: IO ()
 list =
-  get_tuples >$> sort_most_used >$> convert_to_str >>= print
+  get_tuples >>= \case
+    [] -> add_help
+    tuples -> tuples &> sort_most_used &> convert_to_str &> print
   where
   sort_most_used :: [NickNameTuple] -> [NickNameTuple]
   sort_most_used = sortOn (snd .> snd) .> reverse
@@ -77,7 +104,7 @@ list =
   to_pointing_str (nickname, (dir, _)) = nickname ++ " -> " ++ dir
 
   nl_top_bottom :: String -> String
-  nl_top_bottom = ("\n" ++) .> (++ "\n")
+  nl_top_bottom = ("\n\n" ++) .> (++ "\n\n")
 
 inc_cd_counter :: Nickname -> IO ()
 inc_cd_counter nickname =
@@ -94,9 +121,11 @@ inc_cd_counter nickname =
 -- tuples from/to file
 get_tuples :: IO [NickNameTuple]
 get_tuples =
-  get_nicknames_file >>= \nicknames_file ->
-  readFile nicknames_file >$> lines >$> filter (/= "") >$> map line_to_tuple
+  (get_nicknames_file_path >>= readFile) >$> file_str_to_tuples
   where
+  file_str_to_tuples :: String -> [NickNameTuple]
+  file_str_to_tuples = lines .> filter (/= "") .> map line_to_tuple
+
   line_to_tuple :: String -> NickNameTuple
   line_to_tuple =
     splitOn "," .> \case
@@ -105,13 +134,22 @@ get_tuples =
 
 tuples_to_file :: [NickNameTuple] -> IO ()
 tuples_to_file tuples =
-  get_nicknames_file >>= \nicknames_file ->
   (tuples &> map tuple_to_line &> unlines &> writeFile "/tmp/temp") >>
-  callCommand ("mv /tmp/temp " ++ nicknames_file)
+  (callCommand =<< (("mv /tmp/temp " ++) <$> get_nicknames_file_path))
   where
   tuple_to_line :: NickNameTuple -> String
   tuple_to_line (nickname, (dir, cd_counter)) =
     nickname ++ "," ++ dir ++ "," ++ show cd_counter
+
+-- help
+help :: IO ()
+help = get_path_and_print get_help_file_path
+
+add_help :: IO ()
+add_help = get_path_and_print get_add_help_file_path
+
+get_path_and_print :: IO Path -> IO ()
+get_path_and_print get_path = get_path >>= readFile >>= print
 
 -- helpers
 check_if_exists :: Nickname -> IO (Maybe NickNameInfo)
@@ -144,3 +182,14 @@ inc_cd_counter_err :: Error
 inc_cd_counter_err =
   "inc_cd_counter: trying to increase counter on non existant nickname"
 
+get_path_name_err1 :: PathName -> Error
+get_path_name_err1 path_name =
+  "get_path_name: didn't find path name \"" ++ path_name ++ "\""
+
+get_path_name_err2 :: PathName -> Error
+get_path_name_err2 path_name =
+  "get_path_name: found path name \"" ++ path_name ++ "\" multiple times"
+
+paths_error :: String -> Error
+paths_error line =
+  "paths: couldn't split nicely the following line:\n" ++ line

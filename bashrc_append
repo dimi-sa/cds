@@ -1,0 +1,17 @@
+
+cds(){
+case $1 in
+  add | del | help | "") $cds_bin $@;;
+  *) cd_to_path $1
+esac
+}
+
+cd_to_path(){
+dir=$(awk -F, '$1 ~ /^'$1'$/{print $2}' $nns_path)
+case $dir in
+  "")
+    printf "\nI don't know that nickname :/\n";
+    printf "If you want some help run: cds help\n\n";;
+  *) $cds_bin inc_cd_counter $1; cd $dir
+esac
+}

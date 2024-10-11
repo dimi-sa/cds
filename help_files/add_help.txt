@@ -1,0 +1,7 @@
+
+Hmm, no nicknames yet. Want to add some??
+Navigate to the desired derictory and run:
+
+cds add <nickname>
+
+This adds the nickname <nickname> for the working directory.
