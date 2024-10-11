@@ -25,3 +25,12 @@ sudo apt install ghc
 ```
 
 # Installation
+```
+make install
+```
+
+# Deletion
+```
+make uninstall
+```
+
