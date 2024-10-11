@@ -18,6 +18,20 @@ foo@bar:~$ cds desk
 foo@bar:~/Desktop$
 ```
 
+```console
+foo@bar:~$ cds help
+
+To list nicknames:
+cds
+
+To add the nickname <nickname> for the working directory:
+cds add <nickname>
+
+To delete the nickname <nickname>:
+cds del <nickname>
+
+```
+
 # Dependencies
 ## ghc
 ```
