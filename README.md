@@ -40,7 +40,7 @@ sudo apt install ghc
 
 # Installation
 ```
-make install
+make install && source ~/.bashrc
 ```
 
 # Deletion
