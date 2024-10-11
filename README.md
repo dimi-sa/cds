@@ -17,3 +17,11 @@ down -> /home/foo/Downloads
 foo@bar:~$ cds desk
 foo@bar:~/Desktop$
 ```
+
+# Dependencies
+## ghc
+```
+sudo apt install ghc
+```
+
+# Installation

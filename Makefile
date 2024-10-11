@@ -1,11 +1,13 @@
 
 lbin=$(HOME)/.local/bin
+bashrc=$(HOME)/.bashrc
+
 cds_bin=$(lbin)/cds
 cds_dir=$(HOME)/.local/share/cds
+
 nns_path=$(cds_dir)/dir_nicknames
 bash_append_file=$(cds_dir)/bashrc_append
 paths_file=$(cds_dir)/paths_file
-bashrc=$(HOME)/.bashrc
 help_file=$(cds_dir)/help_files/help.txt
 add_help_file=$(cds_dir)/help_files/add_help.txt
 
@@ -36,6 +38,9 @@ $(paths_file): $(cds_dir)
 
 $(cds_dir):
 	mkdir -p $@
+
+uninstall:
+	rm -rf $(cds_bin) $(cds_dir)
 
 clean:
 	$(RM) cds
