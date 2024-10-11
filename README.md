@@ -2,11 +2,15 @@
 
 ```console
 foo@bar:~$ cds
+
+
 docs -> /home/foo/Documents
 
 desk -> /home/foo/Desktop
 
 down -> /home/foo/Downloads
+
+
 ```
 
 ```console
