@@ -11,9 +11,6 @@ paths_file=$(cds_dir)/paths_file
 help_file=$(cds_dir)/help_files/help.txt
 add_help_file=$(cds_dir)/help_files/add_help.txt
 
-line=$(shell grep -n $(subst /,\/,$(bash_append_file)) $(bashrc))
-line_num=$(shell echo $(line) | cut -d ":" -f 1)
-
 $(cds_bin): cds
 	cp $< $(lbin)
 
@@ -44,10 +41,10 @@ $(cds_dir):
 
 uninstall:
 	rm -rf $(cds_bin) $(cds_dir);
-	sed -i $$(($(line_num)-1)),$(line_num)d $(bashrc)
+	./del_bashrc_lines.sh $(bash_append_file) $(bashrc)
 
 test:
-	echo $$(($(line_num)+1))
+	./ok.sh
 
 clean:
 	$(RM) cds
